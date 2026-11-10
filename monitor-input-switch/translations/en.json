@@ -3,17 +3,14 @@
   "status": {
     "no_monitor": "No monitor found",
     "last_known": "(last known)",
-    "unknown": "Not yet switched from this machine",
     "starting": "Starting…"
   },
   "tooltip": {
     "monitor": "Monitor",
-    "last_sent": "Last sent",
     "left_click": "Left click",
     "right_click": "Right click",
     "switch_to": "Switch to {name}",
-    "all_inputs": "All inputs",
-    "error": "Error"
+    "all_inputs": "All inputs"
   },
   "panel": {
     "settings": "Settings"

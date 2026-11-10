@@ -70,9 +70,10 @@ local function render()
   barWidget.setColor(role)
   barWidget.setText(text)
 
+  -- Errors are not repeated here: the notification already showed them, and
+  -- the red icon marks the state.
   local rows = {
     { key = tr("tooltip.monitor"), value = monitorText(snapshot.monitor) },
-    { key = tr("tooltip.last_sent"), value = if current ~= nil then current.label else tr("status.unknown") },
   }
   if not offline then
     table.insert(rows, {
@@ -80,9 +81,6 @@ local function render()
       value = if target ~= nil then tr("tooltip.switch_to", { name = target.label }) else tr("errors.no_quick_target"),
     })
     table.insert(rows, { key = tr("tooltip.right_click"), value = tr("tooltip.all_inputs") })
-  end
-  if snapshot.error ~= nil then
-    table.insert(rows, 1, { key = tr("tooltip.error"), value = snapshot.error })
   end
   barWidget.setTooltip(rows)
 end

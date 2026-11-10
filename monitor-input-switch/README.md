@@ -191,7 +191,8 @@ The last bus that worked is saved in the plugin's data directory, so switching
 back still works, also after the shell restarts.
 
 Most monitors, LG included, do not report the active input reliably, so the
-plugin never reads it back. "Last sent" is what this machine last sent.
+plugin never reads it back. The highlighted input in the menu and the "Last sent
+input" label are what this machine last sent.
 
 - **Processes spawned:** `sh` (the sysfs scan) and `i2ctransfer`, only when
   switching or rescanning.
