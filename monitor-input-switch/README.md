@@ -75,7 +75,7 @@ Log out and in again for the group to apply.
 Add the `button` widget from the bar's Add-widget picker.
 
 - **Left click** switches to the **Quick-switch target**. Set this to the
-  *other* machine's input: USB-C on the workstation, DisplayPort on the laptop. You
+  *other* machine's input: `0xD1` (USB-C) on the workstation, `0xD0` (DisplayPort) on the laptop. You
   only ever see the bar of the machine on screen, so one click always means
   "go to the other machine".
 - **Right click** opens the input menu. Pick an input to switch to it. The last
@@ -108,9 +108,15 @@ The service accepts IPC events. Bind them in your compositor:
 
 ```sh
 noctalia msg plugin robostyle/monitor-input-switch:service all quick          # to the quick-switch target
-noctalia msg plugin robostyle/monitor-input-switch:service all switch usbc    # to a specific input id
+noctalia msg plugin robostyle/monitor-input-switch:service all switch 0xD1    # to an input by code
+noctalia msg plugin robostyle/monitor-input-switch:service all switch usbc    # to an input by name, any case
+noctalia msg plugin robostyle/monitor-input-switch:service all switch 2       # to the second input in the menu (sorted by code)
 noctalia msg plugin robostyle/monitor-input-switch:service all detect         # rescan for the monitor
 ```
+
+`switch` takes an input's code (`0xD1`), its name in any case, or its position
+in the menu, which is sorted by code. Quote names with spaces
+(`switch "PS5 Pro"`). A code keeps working when you rename the input.
 
 A hotkey is the way back when this machine's only monitor shows another
 input, since its bar is then off screen.
@@ -149,9 +155,8 @@ bindsym $mod+Shift+m exec noctalia msg plugin robostyle/monitor-input-switch:ser
 
 | Setting | Type | Default | Description |
 | --- | --- | --- | --- |
-| `quick_target` | `select` | `usbc` | Input for left click, the tile and the `quick` IPC event. |
-| `code_dp`, `code_usbc`, `code_hdmi1`, `code_hdmi2` | `string` | `0xD0`, `0xD1`, `0x90`, `0x91` | Value sent for each input, hex or decimal. Empty hides the input. |
-| `name_dp`, `name_usbc`, `name_hdmi1`, `name_hdmi2` | `string` | *(empty)* | Name shown in the menu and the bar, e.g. Workstation or Laptop. Empty uses DisplayPort, USB-C, HDMI 1 or HDMI 2. |
+| `inputs` | `string_map` | *(empty: `0xD0 = dp`, `0xD1 = usbc`, `0x90 = hdmi1`, `0x91 = hdmi2`)* | Input code → name. The menu is sorted by code. |
+| `quick_target` | `string` | `0xD1` | Code, name or menu position of the input for left click, the tile and the `quick` IPC event. |
 | `protocol` | `select` | `lg` | `lg`: host address 0x50, VCP 0xF4. `mccs`: standard Input Select, VCP 0x60 (advanced). |
 | `vendor` | `string` | `GSM` | EDID manufacturer id used to find the monitor; `GSM` is LG (advanced). |
 | `connector` | `string` | *(empty)* | Only use the monitor on this connector, e.g. `DP-1` (advanced). |
@@ -164,9 +169,27 @@ Widget settings:
 | `label_mode` | `select` | `target` | Text next to the icon: `→ <quick-switch target>`, the last sent input, or nothing. |
 | `glyph` | `glyph` | `device-desktop` | Bar icon. |
 
-The four inputs are fixed: DisplayPort (`dp`), USB-C (`usbc`), HDMI 1 (`hdmi1`)
-and HDMI 2 (`hdmi2`), in that order. The ids are what `switch <input>` takes.
-Clear an input's code to hide an input your monitor does not have.
+Each **Inputs** entry maps the code the monitor expects for an input to the
+name shown in the menu and the bar. While **Inputs** is empty the plugin uses
+the LG inputs `0xD0 = dp`, `0xD1 = usbc`, `0x90 = hdmi1` and `0x91 = hdmi2`.
+The first entry you add replaces all four, so add every input you use:
+
+```text
+0x90 = PS5
+0xD0 = Workstation
+0xD1 = Macbook
+```
+
+The code is the key: hex (`0xD0`) or decimal, fixed once added. To fix a wrong
+code, remove the entry and add it again. The name is the value and can be
+changed any time; two inputs may share a name, and an empty name shows the
+code. The menu is sorted by code. A key that is not a code, or the same code
+written twice (`0xD0` and `208`), is skipped and logged. Use codes for the
+**Quick-switch target** and in hotkeys if you rename inputs often.
+
+The setting starts empty, rather than showing the four LG inputs, because
+Noctalia's key/value editor drops the other default rows on the first edit.
+Entries you add yourself are saved and edited normally.
 
 For a non-LG monitor, set **Protocol** to standard MCCS and enter the
 monitor's own codes. Common MCCS values are `0x0F` DisplayPort 1, `0x10`

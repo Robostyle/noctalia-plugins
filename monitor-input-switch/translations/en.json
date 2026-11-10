@@ -1,11 +1,5 @@
 {
   "title": "Monitor Input Switcher",
-  "inputs": {
-    "dp": "DisplayPort",
-    "usbc": "USB-C",
-    "hdmi1": "HDMI 1",
-    "hdmi2": "HDMI 2"
-  },
   "status": {
     "no_monitor": "No monitor found",
     "last_known": "(last known)",
@@ -28,47 +22,21 @@
     "permission": "No permission to open the i2c device. Install the udev rule from the README.",
     "no_device": "The i2c device does not exist. Load the i2c-dev kernel module (see the README).",
     "not_connected": "Monitor not connected",
-    "unknown_input": "Unknown input '{id}'. Use dp, usbc, hdmi1 or hdmi2.",
+    "unknown_input": "Unknown input '{id}'. Use a code, name or menu position from the Inputs setting.",
     "no_i2ctransfer": "i2ctransfer not found. Install i2c-tools.",
     "no_monitor": "No connected monitor with EDID vendor '{vendor}' found.",
     "spawn": "Could not start i2ctransfer.",
-    "no_quick_target": "The quick-switch target has no code",
-    "no_inputs": "No input has a valid code. Check the input codes in the settings."
+    "no_quick_target": "Quick-switch target is not one of the inputs",
+    "no_inputs": "No usable inputs. Each Inputs entry needs a hex or decimal code, like 0xD0 = Workstation."
   },
   "settings": {
+    "inputs": {
+      "label": "Inputs",
+      "description": "Code and name per input, for example 0xD0 = Workstation. The code is what the monitor expects, hex or decimal; the name is shown in the menu and the bar. Empty uses the LG inputs 0xD0 dp, 0xD1 usbc, 0x90 hdmi1 and 0x91 hdmi2. The first entry you add replaces those, so add every input you use. The menu is sorted by code."
+    },
     "quick_target": {
       "label": "Quick-switch target",
-      "description": "Input a left click, the Control Center tile and the 'quick' IPC event switch to. Set it to the other machine's input: USB-C on the workstation, DisplayPort on the laptop."
-    },
-    "code_dp": {
-      "label": "DisplayPort code"
-    },
-    "name_dp": {
-      "label": "DisplayPort name"
-    },
-    "code_usbc": {
-      "label": "USB-C code"
-    },
-    "name_usbc": {
-      "label": "USB-C name"
-    },
-    "code_hdmi1": {
-      "label": "HDMI 1 code"
-    },
-    "name_hdmi1": {
-      "label": "HDMI 1 name"
-    },
-    "code_hdmi2": {
-      "label": "HDMI 2 code"
-    },
-    "name_hdmi2": {
-      "label": "HDMI 2 name"
-    },
-    "code": {
-      "description": "Value sent to the monitor for this input, hex (0xD0) or decimal. Empty hides the input. The defaults are for LG monitors in LG mode."
-    },
-    "name": {
-      "description": "Name shown in the menu and the bar, for example Workstation or Laptop. Empty uses the input name."
+      "description": "Code (0xD1), name or menu position of the input a left click, the Control Center tile and the 'quick' IPC event switch to. Set it to the other machine's input; a code keeps working when you rename the input."
     },
     "protocol": {
       "label": "Protocol",

@@ -7,7 +7,7 @@
 --
 -- IPC (bind these in your compositor, see README.md):
 --   noctalia msg plugin robostyle/monitor-input-switch:service all quick
---   noctalia msg plugin robostyle/monitor-input-switch:service all switch <input>
+--   noctalia msg plugin robostyle/monitor-input-switch:service all switch <code, name or number>
 --   noctalia msg plugin robostyle/monitor-input-switch:service all detect
 
 local common = require("./common.luau")
@@ -27,14 +27,18 @@ local PROTOCOLS = {
   mccs = { source = 0x51, vcp = 0x60 },
 }
 
--- The fixed inputs, in menu order. Each id has a code_<id> and a name_<id>
--- setting in plugin.toml and an inputs.<id> translation for its default name.
-local INPUTS = {
-  { id = "dp", glyph = "device-desktop" },
-  { id = "usbc", glyph = "usb" },
-  { id = "hdmi1", glyph = "device-tv" },
-  { id = "hdmi2", glyph = "device-tv" },
+-- Menu icons for the well-known codes, per protocol; anything else gets the
+-- monitor icon. Only the codes this plugin ships as defaults (LG) and the
+-- MCCS values the README lists are mapped.
+local GLYPHS = {
+  lg = { [0xD0] = "device-desktop", [0xD1] = "usb", [0x90] = "device-tv", [0x91] = "device-tv" },
+  mccs = { [0x0F] = "device-desktop", [0x10] = "device-desktop", [0x11] = "device-tv", [0x12] = "device-tv" },
 }
+local FALLBACK_GLYPH = "device-desktop"
+
+-- Used while the Inputs setting is empty. Not the manifest default: see the
+-- note in plugin.toml on Noctalia's string_map editor.
+local DEFAULT_INPUTS = { ["0xD0"] = "dp", ["0xD1"] = "usbc", ["0x90"] = "hdmi1", ["0x91"] = "hdmi2" }
 
 -- One line per DRM connector: "<connector> <edid base block as hex | -> <i2c bus | ->".
 -- DP connectors expose their AUX channel as an i2c-N child; HDMI/DVI connectors
@@ -59,7 +63,9 @@ done
 
 -- ── State ────────────────────────────────────────────────────────────────────
 
-local inputs = {} -- { { id, label, glyph, code } } in the configured order
+-- { { id, label, glyph, code } } sorted by code; id is the code as "0xD0",
+-- unique within the list
+local inputs = {}
 local quick: string? = nil -- quick-switch target id, nil when misconfigured
 local current: string? = nil -- last input this machine sent; LGs cannot be read back reliably
 local busy = false
@@ -173,26 +179,86 @@ local function findInput(id: string?)
   return nil
 end
 
+local function codeId(code: number): string
+  return string.format("0x%02X", code)
+end
+
+-- An input as typed in a hotkey or the quick-switch setting: a hex code
+-- ("0xD0"), a 1-based position in the menu ("2"), or a name (any case).
+-- Surrounding quotes are allowed. Decimal codes are only accepted in the
+-- Inputs setting itself, since a plain number here means a position.
+local function resolveInput(text: string?)
+  if type(text) ~= "string" then
+    return nil
+  end
+  local key = trim(text):gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1")
+  key = trim(key)
+  if key:match("^0[xX]%x+$") then
+    local code = parseCode(key)
+    return if code ~= nil then findInput(codeId(code)) else nil
+  end
+  if key:match("^%d+$") then
+    return inputs[tonumber(key)]
+  end
+  local lower = key:lower()
+  for _, input in ipairs(inputs) do
+    if input.label:lower() == lower then
+      return input
+    end
+  end
+  return nil
+end
+
+-- Inputs maps a code (the key, fixed once added) to a name (the value, which
+-- can be edited and need not be unique). Maps come back unordered, so inputs
+-- are sorted by code. An empty name shows the code. Keys that are not a hex
+-- or decimal code, or that repeat a code in another spelling ("0xD0" and
+-- "208"), are skipped and logged. While the setting is empty the built-in LG
+-- inputs are used; see plugin.toml.
 local function readConfig()
+  local map = noctalia.getConfig("inputs")
+  if type(map) ~= "table" or next(map) == nil then
+    map = DEFAULT_INPUTS
+  end
+  local glyphs = GLYPHS[cfgString("protocol", "lg")] or GLYPHS.lg
+
+  local entries = {}
+  for rawCode, rawName in pairs(map) do
+    local code = parseCode(tostring(rawCode))
+    if code == nil then
+      noctalia.log(`input code '{rawCode}' is not a hex or decimal value; skipped`)
+    else
+      local name = if type(rawName) == "string" then trim(rawName) else ""
+      table.insert(entries, { code = code, key = tostring(rawCode), name = name })
+    end
+  end
+  table.sort(entries, function(x, y)
+    if x.code == y.code then
+      return x.key < y.key
+    end
+    return x.code < y.code
+  end)
+
   inputs = {}
-  for _, def in ipairs(INPUTS) do
-    local raw = cfgString(`code_{def.id}`, "")
-    local code = parseCode(raw)
-    if code ~= nil then
-      local label = cfgString(`name_{def.id}`, "")
-      if label == "" then
-        label = tr(`inputs.{def.id}`)
-      end
-      table.insert(inputs, { id = def.id, label = label, glyph = def.glyph, code = code })
-    elseif raw ~= "" then
-      noctalia.log(`code '{raw}' for {def.id} is not a valid hex or decimal value; input hidden`)
+  for _, e in ipairs(entries) do
+    local id = codeId(e.code)
+    if findInput(id) ~= nil then
+      noctalia.log(`input code '{e.key}' repeats {id}; skipped`)
+    else
+      table.insert(inputs, {
+        id = id,
+        label = if e.name ~= "" then e.name else id,
+        glyph = glyphs[e.code] or FALLBACK_GLYPH,
+        code = e.code,
+      })
     end
   end
 
   local target = cfgString("quick_target", "")
-  quick = if findInput(target) ~= nil then target else nil
+  local input = resolveInput(target)
+  quick = if input ~= nil then input.id else nil
   if quick == nil and target ~= "" then
-    noctalia.log(`quick_target '{target}' has no code; quick switch disabled`)
+    noctalia.log(`quick_target '{target}' is not one of the inputs`)
   end
 end
 
@@ -469,8 +535,12 @@ function onIpc(event, payload)
   if event == "quick" then
     switchQuick()
   elseif event == "switch" then
-    local id = if type(payload) == "string" then trim(payload):lower() else ""
-    switchTo(id)
+    local input = resolveInput(payload)
+    if input == nil then
+      noctalia.notifyError(tr("title"), tr("errors.unknown_input", { id = tostring(payload or "") }))
+      return
+    end
+    switchTo(input.id)
   elseif event == "detect" then
     detect(function(_mon)
       publish()

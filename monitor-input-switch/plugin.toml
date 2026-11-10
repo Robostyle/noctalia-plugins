@@ -23,79 +23,35 @@ description = "Switch your monitor's input source over DDC/CI from the bar or a 
 
 # ── Plugin-level settings (service, panel and tile all read these) ───────────
 
-# The inputs are fixed: DisplayPort, USB-C, HDMI 1 and HDMI 2, in that order.
-# Each has a code (empty hides it from the menu) and an optional name. They are
-# separate settings rather than maps, so an input cannot be renamed or added by
-# accident and a code can never lose its input.
+# One map holds every input: the key is its code, the value its name. Like
+# Noctalia's own keyboard layouts, a key is fixed once added and only the value
+# is edited: the code is the input's identity on the monitor (unique, never
+# renamed) and the name is free text. Maps reach the plugin unordered, so the
+# menu sorts by code.
+#
+# The default is empty on purpose. Noctalia's string_map editor saves each row
+# on its own but treats the map as overridden as a whole, so the first edit of
+# a filled default drops every other default row (and deleting a default row
+# does nothing). The community plugins avoid this with an empty default; see
+# https://github.com/noctalia-dev/community-plugins/blob/f1d61716fa21cf8c91f86491e8fea43d13e69058/als-brightness/plugin.toml#L90-L95
+# While the setting is empty the service uses its built-in LG inputs
+# (DEFAULT_INPUTS in service.luau).
 
+[[setting]]
+key = "inputs"
+type = "string_map"
+label_key = "settings.inputs.label"
+description_key = "settings.inputs.description"
+default = {}
+
+# Free text, not a select: a select cannot list the user's own inputs. A code
+# survives renaming the input.
 [[setting]]
 key = "quick_target"
-type = "select"
+type = "string"
 label_key = "settings.quick_target.label"
 description_key = "settings.quick_target.description"
-default = "usbc"
-options = [
-  { value = "dp", label_key = "inputs.dp" },
-  { value = "usbc", label_key = "inputs.usbc" },
-  { value = "hdmi1", label_key = "inputs.hdmi1" },
-  { value = "hdmi2", label_key = "inputs.hdmi2" },
-]
-
-[[setting]]
-key = "code_dp"
-type = "string"
-label_key = "settings.code_dp.label"
-description_key = "settings.code.description"
-default = "0xD0"
-
-[[setting]]
-key = "name_dp"
-type = "string"
-label_key = "settings.name_dp.label"
-description_key = "settings.name.description"
-default = ""
-
-[[setting]]
-key = "code_usbc"
-type = "string"
-label_key = "settings.code_usbc.label"
-description_key = "settings.code.description"
 default = "0xD1"
-
-[[setting]]
-key = "name_usbc"
-type = "string"
-label_key = "settings.name_usbc.label"
-description_key = "settings.name.description"
-default = ""
-
-[[setting]]
-key = "code_hdmi1"
-type = "string"
-label_key = "settings.code_hdmi1.label"
-description_key = "settings.code.description"
-default = "0x90"
-
-[[setting]]
-key = "name_hdmi1"
-type = "string"
-label_key = "settings.name_hdmi1.label"
-description_key = "settings.name.description"
-default = ""
-
-[[setting]]
-key = "code_hdmi2"
-type = "string"
-label_key = "settings.code_hdmi2.label"
-description_key = "settings.code.description"
-default = "0x91"
-
-[[setting]]
-key = "name_hdmi2"
-type = "string"
-label_key = "settings.name_hdmi2.label"
-description_key = "settings.name.description"
-default = ""
 
 [[setting]]
 key = "protocol"
