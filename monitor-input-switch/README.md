@@ -85,7 +85,7 @@ Add the `button` widget from the bar's Add-widget picker.
 
 When the monitor is not connected (cable out, or it shows another input), the
 icon turns red and the label goes away. Left and right click then do nothing,
-and the tooltip shows the last known monitor. The service rescans whenever the
+and the tooltip shows the monitor as Disconnected. The service rescans whenever the
 set of outputs changes, so this shows right away, without a click. Hotkeys
 still work while disconnected; they are the way back after switching away.
 
@@ -175,7 +175,9 @@ the ones your monitor accepts.
 The service scans `/sys/class/drm/card*-*`. For each connected connector it
 reads the EDID manufacturer id (bytes 8–9) and finds the connector's i2c bus:
 the DP AUX channel (`i2c-N` child) or the HDMI `ddc` link. The first match for
-**EDID vendor id** (and **Connector**, if set) is used.
+**EDID vendor id** (and **Connector**, if set) is used. While it is connected,
+the monitor name, serial number and connector are shown in the widget's
+tooltip as **Monitor**, **Serial** and **Output**.
 
 It then writes one DDC/CI VCP-set packet to address `0x37`:
 
@@ -187,8 +189,9 @@ with source `0x50` and VCP `0xF4` for LG, or `0x51` and `0x60` for MCCS. The
 checksum is the XOR of `0x6E` and all preceding bytes.
 
 Once the monitor shows another input it often disappears from this machine.
-The last bus that worked is saved in the plugin's data directory, so switching
-back still works, also after the shell restarts.
+The last bus that worked, with the monitor's connector, name and serial, is
+saved in the plugin's data directory, so switching back still works and the
+tooltip still names the monitor, also after the shell restarts.
 
 Most monitors, LG included, do not report the active input reliably, so the
 plugin never reads it back. The highlighted input in the menu and the "Last sent

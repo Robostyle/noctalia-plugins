@@ -31,7 +31,7 @@ local DEFAULT_LABELS = { dp = "DisplayPort", usbc = "USB-C", hdmi1 = "HDMI 1", h
 local DEFAULT_GLYPHS = { dp = "device-desktop", usbc = "usb", hdmi1 = "device-tv", hdmi2 = "device-tv" }
 local FALLBACK_GLYPH = "device-desktop"
 
--- One line per DRM connector: "<connector> <edid bytes 8-9 as hex | -> <i2c bus | ->".
+-- One line per DRM connector: "<connector> <edid base block as hex | -> <i2c bus | ->".
 -- DP connectors expose their AUX channel as an i2c-N child; HDMI/DVI connectors
 -- link theirs as ddc/. A connector reported as disconnected yields "-" for the
 -- EDID, so it never matches; the bus number is still printed.
@@ -41,7 +41,7 @@ for c in /sys/class/drm/card*-*; do
   n=${c##*/}; n=${n#*-}
   v=-
   if [ "$(cat "$c/status" 2>/dev/null)" = connected ]; then
-    v=$(od -An -tx1 -j8 -N2 "$c/edid" 2>/dev/null | tr -d ' \n')
+    v=$(od -An -tx1 -N128 "$c/edid" 2>/dev/null | tr -d ' \n')
     [ -n "$v" ] || v=-
   fi
   b=-
@@ -60,7 +60,9 @@ local current: string? = nil -- last input this machine sent; LGs cannot be read
 local busy = false
 local pending: string? = nil -- newest request that arrived while busy
 local lastError: string? = nil
-local monitor = nil -- { connector, vendor, bus, live }; live = seen in the last scan
+-- { connector, vendor, name, serial, bus, live }; name and serial come from the
+-- EDID and may be nil; live = seen in the last scan
+local monitor = nil
 local hasTool = noctalia.commandExists("i2ctransfer")
 
 local switchTo -- forward declaration
@@ -107,7 +109,14 @@ local function loadCache()
   local text = noctalia.readFile(cachePath)
   local data = text and noctalia.json.decode(text)
   if type(data) == "table" and type(data.bus) == "number" then
-    monitor = { connector = data.connector, vendor = data.vendor, bus = data.bus, live = false }
+    monitor = {
+      connector = data.connector,
+      vendor = data.vendor,
+      name = data.name,
+      serial = data.serial,
+      bus = data.bus,
+      live = false,
+    }
   end
 end
 
@@ -115,7 +124,13 @@ local function saveCache()
   if cachePath == nil or monitor == nil then
     return
   end
-  local text = noctalia.json.encode({ connector = monitor.connector, vendor = monitor.vendor, bus = monitor.bus })
+  local text = noctalia.json.encode({
+    connector = monitor.connector,
+    vendor = monitor.vendor,
+    name = monitor.name,
+    serial = monitor.serial,
+    bus = monitor.bus,
+  })
   if text ~= nil then
     local ok, err = noctalia.writeFile(cachePath, text)
     if not ok then
@@ -207,7 +222,14 @@ end
 local function publish()
   local mon = nil
   if monitor ~= nil then
-    mon = { connector = monitor.connector, vendor = monitor.vendor, bus = monitor.bus, live = monitor.live }
+    mon = {
+      connector = monitor.connector,
+      vendor = monitor.vendor,
+      name = monitor.name,
+      serial = monitor.serial,
+      bus = monitor.bus,
+      live = monitor.live,
+    }
   end
   noctalia.state.set(common.STATE_KEY, {
     inputs = inputs,
@@ -238,6 +260,35 @@ local function decodeVendor(hex: string): string?
   return table.concat(letters)
 end
 
+-- EDID display descriptor text: up to 13 ASCII bytes after the 5-byte header,
+-- ended by a newline and padded with spaces. Descriptors sit at bytes 54, 72,
+-- 90 and 108 of the base block; one starting 00 00 00 <tag> carries text for
+-- tag 0xFC (monitor name) or 0xFF (serial number). hex is the base block as
+-- lowercase hex, two characters per byte.
+local function edidText(hex: string, tag: number): string?
+  for _, offset in ipairs({ 54, 72, 90, 108 }) do
+    local at = offset * 2 + 1
+    local header = hex:sub(at, at + 9)
+    if #header == 10 and header:sub(1, 6) == "000000" and tonumber(header:sub(7, 8), 16) == tag then
+      local chars = {}
+      for i = 5, 17 do
+        local byte = tonumber(hex:sub(at + i * 2, at + i * 2 + 1), 16)
+        if byte == nil or byte == 0x0A or byte == 0x00 then
+          break
+        end
+        if byte >= 0x20 and byte < 0x7F then
+          table.insert(chars, string.char(byte))
+        end
+      end
+      local text = trim(table.concat(chars))
+      if text ~= "" then
+        return text
+      end
+    end
+  end
+  return nil
+end
+
 -- Calls onDone(monitor) with the detected monitor, the last known one when the
 -- scan finds nothing, or nil. Scanning sysfs takes a few milliseconds, so it
 -- runs before every switch: bus numbers can change across reboots and hotplug.
@@ -258,9 +309,16 @@ local function detect(onDone)
       for line in res.stdout:gmatch("[^\n]+") do
         local connector, hex, bus = line:match("^(%S+)%s+(%S+)%s+(%S+)$")
         if connector ~= nil and tonumber(bus) ~= nil then
-          local vendor = decodeVendor(hex)
+          local vendor = decodeVendor(hex:sub(17, 20))
           if vendor == wantVendor and (wantConnector == "" or connector == wantConnector) then
-            found = { connector = connector, vendor = vendor, bus = tonumber(bus), live = true }
+            found = {
+              connector = connector,
+              vendor = vendor,
+              name = edidText(hex, 0xFC),
+              serial = edidText(hex, 0xFF),
+              bus = tonumber(bus),
+              live = true,
+            }
             break
           end
         end
@@ -270,7 +328,11 @@ local function detect(onDone)
     end
 
     if found ~= nil then
-      local changed = monitor == nil or monitor.bus ~= found.bus or monitor.connector ~= found.connector
+      local changed = monitor == nil
+        or monitor.bus ~= found.bus
+        or monitor.connector ~= found.connector
+        or monitor.name ~= found.name
+        or monitor.serial ~= found.serial
       monitor = found
       if changed then
         saveCache()

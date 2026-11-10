@@ -12,23 +12,18 @@ local function tr(key, args)
   return noctalia.tr(key, args)
 end
 
+-- The monitor name from the EDID ("LG ULTRAGEAR+"), or "Disconnected" when the
+-- last scan did not find it; the vendor id or the i2c bus when the EDID gave
+-- no name (or a fixed bus override skipped the scan). Tooltips do not wrap and
+-- cut long values, so keep this short.
 local function monitorText(mon): string
   if mon == nil then
     return tr("status.no_monitor")
   end
-  local parts = {}
-  if mon.vendor ~= nil then
-    table.insert(parts, mon.vendor)
-  end
-  if mon.connector ~= nil then
-    table.insert(parts, mon.connector)
-  end
-  table.insert(parts, `/dev/i2c-{mon.bus}`)
-  local text = table.concat(parts, " · ")
   if not mon.live then
-    text = text .. " " .. tr("status.last_known")
+    return tr("status.disconnected")
   end
-  return text
+  return mon.name or mon.vendor or `/dev/i2c-{mon.bus}`
 end
 
 local function render()
@@ -75,6 +70,13 @@ local function render()
   local rows = {
     { key = tr("tooltip.monitor"), value = monitorText(snapshot.monitor) },
   }
+  local mon = snapshot.monitor
+  if mon ~= nil and mon.live and mon.serial ~= nil then
+    table.insert(rows, { key = tr("tooltip.serial"), value = mon.serial })
+  end
+  if mon ~= nil and mon.connector ~= nil then
+    table.insert(rows, { key = tr("tooltip.output"), value = mon.connector })
+  end
   if not offline then
     table.insert(rows, {
       key = tr("tooltip.left_click"),

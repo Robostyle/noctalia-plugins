@@ -3,10 +3,13 @@
   "status": {
     "no_monitor": "No monitor found",
     "last_known": "(last known)",
+    "disconnected": "Disconnected",
     "starting": "Starting…"
   },
   "tooltip": {
     "monitor": "Monitor",
+    "serial": "Serial",
+    "output": "Output",
     "left_click": "Left click",
     "right_click": "Right click",
     "switch_to": "Switch to {name}",
