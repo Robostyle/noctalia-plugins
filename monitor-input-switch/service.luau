@@ -296,7 +296,11 @@ local function describeWriteError(stderr: string?): string
   if s:find("No such file", 1, true) then
     return tr("errors.no_device")
   end
-  return tr("errors.write_failed", { detail = s:match("[^\n]+") or "?" })
+  -- Anything else: the monitor did not answer, usually because it is not
+  -- connected (cable out, or it already shows another input). The raw
+  -- i2ctransfer output goes to the log only.
+  noctalia.log(`i2ctransfer failed: {s:match("[^\n]+") or "?"}`)
+  return tr("errors.not_connected")
 end
 
 local function finish()
@@ -371,7 +375,8 @@ switchTo = function(id: string)
     noctalia.log(table.concat(argv, " "))
     local started = noctalia.runAsync(argv, function(res)
       if res.timedOut then
-        fail(tr("errors.timeout"))
+        noctalia.log("i2ctransfer timed out")
+        fail(tr("errors.not_connected"))
       elseif res.exitCode ~= 0 then
         fail(describeWriteError(res.stderr))
       else

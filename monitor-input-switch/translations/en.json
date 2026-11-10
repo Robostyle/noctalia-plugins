@@ -21,11 +21,10 @@
   "errors": {
     "permission": "No permission to open the i2c device. Install the udev rule from the README.",
     "no_device": "The i2c device does not exist. Load the i2c-dev kernel module (see the README).",
-    "write_failed": "i2ctransfer failed: {detail}",
+    "not_connected": "Monitor not connected",
     "unknown_input": "Unknown input '{id}'. Add it to the Inputs setting and give it a code.",
     "no_i2ctransfer": "i2ctransfer not found. Install i2c-tools.",
     "no_monitor": "No connected monitor with EDID vendor '{vendor}' found.",
-    "timeout": "i2ctransfer timed out.",
     "spawn": "Could not start i2ctransfer.",
     "no_quick_target": "Quick-switch target is not one of the inputs",
     "no_inputs": "No usable inputs. Check the Inputs and Input codes settings."
