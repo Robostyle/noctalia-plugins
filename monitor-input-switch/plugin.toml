@@ -23,34 +23,79 @@ description = "Switch your monitor's input source over DDC/CI from the bar or a 
 
 # ── Plugin-level settings (service, panel and tile all read these) ───────────
 
+# The inputs are fixed: DisplayPort, USB-C, HDMI 1 and HDMI 2, in that order.
+# Each has a code (empty hides it from the menu) and an optional name. They are
+# separate settings rather than maps, so an input cannot be renamed or added by
+# accident and a code can never lose its input.
+
 [[setting]]
 key = "quick_target"
-type = "string"
+type = "select"
 label_key = "settings.quick_target.label"
 description_key = "settings.quick_target.description"
 default = "usbc"
+options = [
+  { value = "dp", label_key = "inputs.dp" },
+  { value = "usbc", label_key = "inputs.usbc" },
+  { value = "hdmi1", label_key = "inputs.hdmi1" },
+  { value = "hdmi2", label_key = "inputs.hdmi2" },
+]
 
 [[setting]]
-key = "inputs"
-type = "string_list"
-label_key = "settings.inputs.label"
-description_key = "settings.inputs.description"
-default = ["dp", "usbc", "hdmi1", "hdmi2"]
+key = "code_dp"
+type = "string"
+label_key = "settings.code_dp.label"
+description_key = "settings.code.description"
+default = "0xD0"
 
 [[setting]]
-key = "labels"
-type = "string_map"
-label_key = "settings.labels.label"
-description_key = "settings.labels.description"
-default = {}
+key = "name_dp"
+type = "string"
+label_key = "settings.name_dp.label"
+description_key = "settings.name.description"
+default = ""
 
 [[setting]]
-key = "codes"
-type = "string_map"
-label_key = "settings.codes.label"
-description_key = "settings.codes.description"
-default = { dp = "0xD0", usbc = "0xD1", hdmi1 = "0x90", hdmi2 = "0x91" }
-advanced = true
+key = "code_usbc"
+type = "string"
+label_key = "settings.code_usbc.label"
+description_key = "settings.code.description"
+default = "0xD1"
+
+[[setting]]
+key = "name_usbc"
+type = "string"
+label_key = "settings.name_usbc.label"
+description_key = "settings.name.description"
+default = ""
+
+[[setting]]
+key = "code_hdmi1"
+type = "string"
+label_key = "settings.code_hdmi1.label"
+description_key = "settings.code.description"
+default = "0x90"
+
+[[setting]]
+key = "name_hdmi1"
+type = "string"
+label_key = "settings.name_hdmi1.label"
+description_key = "settings.name.description"
+default = ""
+
+[[setting]]
+key = "code_hdmi2"
+type = "string"
+label_key = "settings.code_hdmi2.label"
+description_key = "settings.code.description"
+default = "0x91"
+
+[[setting]]
+key = "name_hdmi2"
+type = "string"
+label_key = "settings.name_hdmi2.label"
+description_key = "settings.name.description"
+default = ""
 
 [[setting]]
 key = "protocol"

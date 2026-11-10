@@ -75,7 +75,7 @@ Log out and in again for the group to apply.
 Add the `button` widget from the bar's Add-widget picker.
 
 - **Left click** switches to the **Quick-switch target**. Set this to the
-  *other* machine's input: `usbc` on the workstation, `dp` on the laptop. You
+  *other* machine's input: USB-C on the workstation, DisplayPort on the laptop. You
   only ever see the bar of the machine on screen, so one click always means
   "go to the other machine".
 - **Right click** opens the input menu. Pick an input to switch to it. The last
@@ -149,10 +149,9 @@ bindsym $mod+Shift+m exec noctalia msg plugin robostyle/monitor-input-switch:ser
 
 | Setting | Type | Default | Description |
 | --- | --- | --- | --- |
-| `quick_target` | `string` | `usbc` | Input id for left click, the tile and the `quick` IPC event. |
-| `inputs` | `string_list` | `dp`, `usbc`, `hdmi1`, `hdmi2` | Input ids shown in the menu, in order. |
-| `labels` | `string_map` | *(empty)* | Display names per input id, e.g. `dp = Workstation`, `usbc = Laptop`. |
-| `codes` | `string_map` | `dp = 0xD0`, `usbc = 0xD1`, `hdmi1 = 0x90`, `hdmi2 = 0x91` | Value sent per input id, hex or decimal (advanced). |
+| `quick_target` | `select` | `usbc` | Input for left click, the tile and the `quick` IPC event. |
+| `code_dp`, `code_usbc`, `code_hdmi1`, `code_hdmi2` | `string` | `0xD0`, `0xD1`, `0x90`, `0x91` | Value sent for each input, hex or decimal. Empty hides the input. |
+| `name_dp`, `name_usbc`, `name_hdmi1`, `name_hdmi2` | `string` | *(empty)* | Name shown in the menu and the bar, e.g. Workstation or Laptop. Empty uses DisplayPort, USB-C, HDMI 1 or HDMI 2. |
 | `protocol` | `select` | `lg` | `lg`: host address 0x50, VCP 0xF4. `mccs`: standard Input Select, VCP 0x60 (advanced). |
 | `vendor` | `string` | `GSM` | EDID manufacturer id used to find the monitor; `GSM` is LG (advanced). |
 | `connector` | `string` | *(empty)* | Only use the monitor on this connector, e.g. `DP-1` (advanced). |
@@ -164,6 +163,10 @@ Widget settings:
 | --- | --- | --- | --- |
 | `label_mode` | `select` | `target` | Text next to the icon: `→ <quick-switch target>`, the last sent input, or nothing. |
 | `glyph` | `glyph` | `device-desktop` | Bar icon. |
+
+The four inputs are fixed: DisplayPort (`dp`), USB-C (`usbc`), HDMI 1 (`hdmi1`)
+and HDMI 2 (`hdmi2`), in that order. The ids are what `switch <input>` takes.
+Clear an input's code to hide an input your monitor does not have.
 
 For a non-LG monitor, set **Protocol** to standard MCCS and enter the
 monitor's own codes. Common MCCS values are `0x0F` DisplayPort 1, `0x10`

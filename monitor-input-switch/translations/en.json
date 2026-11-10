@@ -1,5 +1,11 @@
 {
   "title": "Monitor Input Switcher",
+  "inputs": {
+    "dp": "DisplayPort",
+    "usbc": "USB-C",
+    "hdmi1": "HDMI 1",
+    "hdmi2": "HDMI 2"
+  },
   "status": {
     "no_monitor": "No monitor found",
     "last_known": "(last known)",
@@ -22,29 +28,47 @@
     "permission": "No permission to open the i2c device. Install the udev rule from the README.",
     "no_device": "The i2c device does not exist. Load the i2c-dev kernel module (see the README).",
     "not_connected": "Monitor not connected",
-    "unknown_input": "Unknown input '{id}'. Add it to the Inputs setting and give it a code.",
+    "unknown_input": "Unknown input '{id}'. Use dp, usbc, hdmi1 or hdmi2.",
     "no_i2ctransfer": "i2ctransfer not found. Install i2c-tools.",
     "no_monitor": "No connected monitor with EDID vendor '{vendor}' found.",
     "spawn": "Could not start i2ctransfer.",
-    "no_quick_target": "Quick-switch target is not one of the inputs",
-    "no_inputs": "No usable inputs. Check the Inputs and Input codes settings."
+    "no_quick_target": "The quick-switch target has no code",
+    "no_inputs": "No input has a valid code. Check the input codes in the settings."
   },
   "settings": {
     "quick_target": {
       "label": "Quick-switch target",
-      "description": "Input a left click, the Control Center tile and the 'quick' IPC event switch to. Set it to the other machine's input: usbc on the workstation, dp on the laptop."
+      "description": "Input a left click, the Control Center tile and the 'quick' IPC event switch to. Set it to the other machine's input: USB-C on the workstation, DisplayPort on the laptop."
     },
-    "inputs": {
-      "label": "Inputs",
-      "description": "Input ids listed in the menu, in this order. Each id needs an entry in Input codes."
+    "code_dp": {
+      "label": "DisplayPort code"
     },
-    "labels": {
-      "label": "Input labels",
-      "description": "Optional display names per input id, for example dp = Workstation and usbc = Laptop."
+    "name_dp": {
+      "label": "DisplayPort name"
     },
-    "codes": {
-      "label": "Input codes",
-      "description": "Value written for each input id, hex (0xD0) or decimal. The defaults are for LG monitors in LG mode."
+    "code_usbc": {
+      "label": "USB-C code"
+    },
+    "name_usbc": {
+      "label": "USB-C name"
+    },
+    "code_hdmi1": {
+      "label": "HDMI 1 code"
+    },
+    "name_hdmi1": {
+      "label": "HDMI 1 name"
+    },
+    "code_hdmi2": {
+      "label": "HDMI 2 code"
+    },
+    "name_hdmi2": {
+      "label": "HDMI 2 name"
+    },
+    "code": {
+      "description": "Value sent to the monitor for this input, hex (0xD0) or decimal. Empty hides the input. The defaults are for LG monitors in LG mode."
+    },
+    "name": {
+      "description": "Name shown in the menu and the bar, for example Workstation or Laptop. Empty uses the input name."
     },
     "protocol": {
       "label": "Protocol",

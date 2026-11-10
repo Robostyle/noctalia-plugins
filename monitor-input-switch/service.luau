@@ -27,9 +27,14 @@ local PROTOCOLS = {
   mccs = { source = 0x51, vcp = 0x60 },
 }
 
-local DEFAULT_LABELS = { dp = "DisplayPort", usbc = "USB-C", hdmi1 = "HDMI 1", hdmi2 = "HDMI 2" }
-local DEFAULT_GLYPHS = { dp = "device-desktop", usbc = "usb", hdmi1 = "device-tv", hdmi2 = "device-tv" }
-local FALLBACK_GLYPH = "device-desktop"
+-- The fixed inputs, in menu order. Each id has a code_<id> and a name_<id>
+-- setting in plugin.toml and an inputs.<id> translation for its default name.
+local INPUTS = {
+  { id = "dp", glyph = "device-desktop" },
+  { id = "usbc", glyph = "usb" },
+  { id = "hdmi1", glyph = "device-tv" },
+  { id = "hdmi2", glyph = "device-tv" },
+}
 
 -- One line per DRM connector: "<connector> <edid base block as hex | -> <i2c bus | ->".
 -- DP connectors expose their AUX channel as an i2c-N child; HDMI/DVI connectors
@@ -159,55 +164,6 @@ local function parseCode(value): number?
   return n
 end
 
-local function readConfig()
-  local list = noctalia.getConfig("inputs")
-  local codes = noctalia.getConfig("codes")
-  local labels = noctalia.getConfig("labels")
-  if type(codes) ~= "table" then
-    codes = {}
-  end
-  if type(labels) ~= "table" then
-    labels = {}
-  end
-
-  inputs = {}
-  local seen = {}
-  if type(list) == "table" then
-    for _, raw in ipairs(list) do
-      local id = trim(tostring(raw)):lower()
-      if id ~= "" and not seen[id] then
-        seen[id] = true
-        local code = parseCode(codes[id] or codes[raw])
-        if code == nil then
-          noctalia.log(`input '{id}' has no valid entry in the codes setting; skipped`)
-        else
-          local label = labels[id] or labels[raw]
-          if type(label) ~= "string" or trim(label) == "" then
-            label = DEFAULT_LABELS[id] or id
-          end
-          table.insert(inputs, {
-            id = id,
-            label = trim(label),
-            glyph = DEFAULT_GLYPHS[id] or FALLBACK_GLYPH,
-            code = code,
-          })
-        end
-      end
-    end
-  end
-
-  local target = cfgString("quick_target", ""):lower()
-  quick = nil
-  for _, input in ipairs(inputs) do
-    if input.id == target then
-      quick = target
-    end
-  end
-  if quick == nil and target ~= "" then
-    noctalia.log(`quick_target '{target}' is not one of the configured inputs`)
-  end
-end
-
 local function findInput(id: string?)
   for _, input in ipairs(inputs) do
     if input.id == id then
@@ -215,6 +171,29 @@ local function findInput(id: string?)
     end
   end
   return nil
+end
+
+local function readConfig()
+  inputs = {}
+  for _, def in ipairs(INPUTS) do
+    local raw = cfgString(`code_{def.id}`, "")
+    local code = parseCode(raw)
+    if code ~= nil then
+      local label = cfgString(`name_{def.id}`, "")
+      if label == "" then
+        label = tr(`inputs.{def.id}`)
+      end
+      table.insert(inputs, { id = def.id, label = label, glyph = def.glyph, code = code })
+    elseif raw ~= "" then
+      noctalia.log(`code '{raw}' for {def.id} is not a valid hex or decimal value; input hidden`)
+    end
+  end
+
+  local target = cfgString("quick_target", "")
+  quick = if findInput(target) ~= nil then target else nil
+  if quick == nil and target ~= "" then
+    noctalia.log(`quick_target '{target}' has no code; quick switch disabled`)
+  end
 end
 
 -- ── Publishing ───────────────────────────────────────────────────────────────
