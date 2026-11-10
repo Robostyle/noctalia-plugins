@@ -1,0 +1,143 @@
+# Monitor Input: switch a monitor's input source over DDC/CI from the bar or a
+# hotkey. Written for LG monitors that need LG's vendor command (host address
+# 0x50, VCP 0xF4); the standard MCCS Input Select (VCP 0x60) is a setting away.
+#
+# The service owns the i2c bus: it finds the monitor through sysfs (EDID vendor
+# id -> connector -> i2c bus), writes the command with i2ctransfer, and
+# publishes state that the widget, panel and control-center tile render.
+# Hotkeys go to the service over IPC; see README.md.
+
+id = "robostyle/monitor-input-switch"
+name = "Monitor Input Switcher"
+version = "0.1.0"
+# 24: argv runAsync. Also uses require (22), [widget.actions] (14),
+# openSettings (15) and service onExit (17). Runs on Noctalia v5.0.0-beta.9+.
+plugin_api = 24
+author = "Robostyle"
+license = "MIT"
+# i2ctransfer comes from i2c-tools. sh and od (coreutils) run the sysfs scan.
+dependencies = ["i2ctransfer", "sh", "od"]
+tags = ["bar", "panel", "service", "shortcut", "hardware", "utility"]
+icon = "device-desktop"
+description = "Switch your monitor's input source over DDC/CI from the bar or a hotkey."
+
+# ── Plugin-level settings (service, panel and tile all read these) ───────────
+
+[[setting]]
+key = "quick_target"
+type = "string"
+label_key = "settings.quick_target.label"
+description_key = "settings.quick_target.description"
+default = "usbc"
+
+[[setting]]
+key = "inputs"
+type = "string_list"
+label_key = "settings.inputs.label"
+description_key = "settings.inputs.description"
+default = ["dp", "usbc", "hdmi1", "hdmi2"]
+
+[[setting]]
+key = "labels"
+type = "string_map"
+label_key = "settings.labels.label"
+description_key = "settings.labels.description"
+default = {}
+
+[[setting]]
+key = "codes"
+type = "string_map"
+label_key = "settings.codes.label"
+description_key = "settings.codes.description"
+default = { dp = "0xD0", usbc = "0xD1", hdmi1 = "0x90", hdmi2 = "0x91" }
+advanced = true
+
+[[setting]]
+key = "protocol"
+type = "select"
+label_key = "settings.protocol.label"
+description_key = "settings.protocol.description"
+default = "lg"
+options = [
+  { value = "lg", label_key = "settings.protocol.options.lg" },
+  { value = "mccs", label_key = "settings.protocol.options.mccs" },
+]
+advanced = true
+
+[[setting]]
+key = "vendor"
+type = "string"
+label_key = "settings.vendor.label"
+description_key = "settings.vendor.description"
+default = "GSM"
+advanced = true
+
+[[setting]]
+key = "connector"
+type = "string"
+label_key = "settings.connector.label"
+description_key = "settings.connector.description"
+default = ""
+advanced = true
+
+[[setting]]
+key = "bus"
+type = "int"
+label_key = "settings.bus.label"
+description_key = "settings.bus.description"
+default = -1
+min = -1
+max = 255
+advanced = true
+
+# ── Entries ──────────────────────────────────────────────────────────────────
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+# The input list that opens under the bar button on right click.
+[[panel]]
+id = "menu"
+entry = "panel.luau"
+# Fixed size: fits four inputs plus the footer; more inputs scroll.
+width = 260
+height = 250
+placement = "attached"
+position = "auto"
+open_near_click = true
+dismiss_on_outside_click = true
+
+[[widget]]
+id = "button"
+entry = "widget.luau"
+
+  # Declared as IPC lines rather than hard-coded in onClick/onRightClick, so
+  # the bar's own gesture settings can remap them. Middle click keeps the
+  # host default (open this widget's settings).
+  [widget.actions]
+  left = "plugin robostyle/monitor-input-switch:service all quick"
+  right = "panel-toggle robostyle/monitor-input-switch:menu"
+
+  [[widget.setting]]
+  key = "label_mode"
+  type = "select"
+  label_key = "settings.label_mode.label"
+  description_key = "settings.label_mode.description"
+  default = "target"
+  options = [
+    { value = "target", label_key = "settings.label_mode.options.target" },
+    { value = "current", label_key = "settings.label_mode.options.current" },
+    { value = "none", label_key = "settings.label_mode.options.none" },
+  ]
+
+  [[widget.setting]]
+  key = "glyph"
+  type = "glyph"
+  label_key = "settings.glyph.label"
+  default = "device-desktop"
+
+# Control Center tile: one press sends the quick-switch target.
+[[shortcut]]
+id = "quick"
+entry = "shortcut.luau"

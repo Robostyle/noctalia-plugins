@@ -1,0 +1,83 @@
+{
+  "title": "Monitor Input Switcher",
+  "status": {
+    "no_monitor": "No monitor found",
+    "last_known": "(last known)",
+    "unknown": "Not yet switched from this machine",
+    "starting": "Starting…"
+  },
+  "tooltip": {
+    "monitor": "Monitor",
+    "last_sent": "Last sent",
+    "left_click": "Left click",
+    "right_click": "Right click",
+    "switch_to": "Switch to {name}",
+    "all_inputs": "All inputs",
+    "error": "Error"
+  },
+  "panel": {
+    "settings": "Settings"
+  },
+  "errors": {
+    "permission": "No permission to open the i2c device. Install the udev rule from the README.",
+    "no_device": "The i2c device does not exist. Load the i2c-dev kernel module (see the README).",
+    "write_failed": "i2ctransfer failed: {detail}",
+    "unknown_input": "Unknown input '{id}'. Add it to the Inputs setting and give it a code.",
+    "no_i2ctransfer": "i2ctransfer not found. Install i2c-tools.",
+    "no_monitor": "No connected monitor with EDID vendor '{vendor}' found.",
+    "timeout": "i2ctransfer timed out.",
+    "spawn": "Could not start i2ctransfer.",
+    "no_quick_target": "Quick-switch target is not one of the inputs",
+    "no_inputs": "No usable inputs. Check the Inputs and Input codes settings."
+  },
+  "settings": {
+    "quick_target": {
+      "label": "Quick-switch target",
+      "description": "Input a left click, the Control Center tile and the 'quick' IPC event switch to. Set it to the other machine's input: usbc on the workstation, dp on the laptop."
+    },
+    "inputs": {
+      "label": "Inputs",
+      "description": "Input ids listed in the menu, in this order. Each id needs an entry in Input codes."
+    },
+    "labels": {
+      "label": "Input labels",
+      "description": "Optional display names per input id, for example dp = Workstation and usbc = Laptop."
+    },
+    "codes": {
+      "label": "Input codes",
+      "description": "Value written for each input id, hex (0xD0) or decimal. The defaults are for LG monitors in LG mode."
+    },
+    "protocol": {
+      "label": "Protocol",
+      "description": "LG uses host address 0x50 and VCP 0xF4. Other monitors use standard MCCS Input Select (VCP 0x60) with their own codes.",
+      "options": {
+        "lg": "LG (0x50, VCP 0xF4)",
+        "mccs": "Standard MCCS (VCP 0x60)"
+      }
+    },
+    "vendor": {
+      "label": "EDID vendor id",
+      "description": "Three-letter manufacturer id used to find the monitor. GSM is LG."
+    },
+    "connector": {
+      "label": "Connector",
+      "description": "Only use the monitor on this connector, for example DP-1. Empty picks the first match."
+    },
+    "bus": {
+      "label": "i2c bus override",
+      "description": "Always use /dev/i2c-N with this number and skip detection. -1 detects automatically."
+    },
+    "label_mode": {
+      "label": "Label",
+      "description": "Text next to the icon.",
+      "options": {
+        "target": "Quick-switch target",
+        "current": "Last sent input",
+        "none": "Icon only"
+      }
+    },
+    "glyph": {
+      "label": "Icon"
+    }
+  }
+}

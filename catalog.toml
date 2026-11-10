@@ -1,0 +1,12 @@
+[[plugin]]
+id           = "robostyle/monitor-input-switch"
+name         = "Monitor Input Switcher"
+version      = "0.1.0"
+author       = "Robostyle"
+license      = "MIT"
+icon         = "device-desktop"
+description  = "Switch your monitor's input source over DDC/CI from the bar or a hotkey."
+deprecated   = false
+plugin_api   = 24
+tags         = ["bar", "panel", "service", "shortcut", "hardware", "utility"]
+dependencies = ["i2ctransfer", "sh", "od"]

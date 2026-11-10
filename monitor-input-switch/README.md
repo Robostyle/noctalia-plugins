@@ -1,0 +1,202 @@
+# Monitor Input Switcher
+
+Switch your monitor's input source over DDC/CI from the bar or a hotkey. Made
+for one monitor shared by two machines, such as a workstation on DisplayPort
+and a laptop on USB-C: each machine sends the monitor to the other with one
+click.
+
+Written for LG monitors, which need LG's own command (tested on the LG
+45GX950A). Other monitors work with the standard MCCS protocol setting.
+
+## Plugin
+
+| Field | Value |
+| --- | --- |
+| ID | `robostyle/monitor-input-switch` |
+| Entries | Bar widget: `button`; panel: `menu`; service: `service`; shortcut: `quick` |
+
+## Requirements
+
+- `i2ctransfer` on `PATH`, from the `i2c-tools` package (Arch: `i2c-tools`,
+  Debian/Ubuntu: `i2c-tools`, Fedora: `i2c-tools`).
+- `sh` and `od` (coreutils), used to scan `/sys/class/drm` for the monitor.
+- The `i2c-dev` kernel module, so `/dev/i2c-N` devices exist.
+- Read/write access to the monitor's `/dev/i2c-N` as your user, through a udev
+  rule.
+- A direct cable. DDC/CI over USB-C works when the laptop is plugged straight
+  into the monitor; docks and MST hubs often do not pass it through.
+- DDC/CI enabled in the monitor's on-screen menu (on by default on most LGs).
+
+ddcutil is not needed.
+
+### One-time setup
+
+Load `i2c-dev` now and at every boot:
+
+```bash
+echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf
+sudo modprobe i2c-dev
+```
+
+Give the logged-in user access to i2c buses that belong to a graphics card:
+
+```bash
+echo 'SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", ATTRS{class}=="0x03*", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/60-monitor-input-switch.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=i2c-dev
+```
+
+`getfacl /dev/i2c-N` should now list your user with `rw-`. No group and no
+re-login are needed. If ddcutil is installed, its own
+`/usr/lib/udev/rules.d/60-ddcutil-i2c.rules` already contains this rule.
+
+The `ATTRS{class}=="0x03*"` match is deliberate: it only opens buses on the
+GPU. Rules that open every `/dev/i2c-*` also expose the motherboard's SMBus,
+where RAM configuration chips and RGB controllers live, and a stray write there
+can damage them.
+
+Some systems briefly deny `uaccess` devices after resume from sleep. If you
+see permission errors after waking up, use a group instead:
+
+```bash
+sudo groupadd --system i2c
+sudo usermod -aG i2c "$USER"
+echo 'SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", ATTRS{class}=="0x03*", GROUP="i2c", MODE="0660"' \
+  | sudo tee /etc/udev/rules.d/60-monitor-input-switch.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=i2c-dev
+```
+
+Log out and in again for the group to apply.
+
+## Usage
+
+Add the `button` widget from the bar's Add-widget picker.
+
+- **Left click** switches to the **Quick-switch target**. Set this to the
+  *other* machine's input: `usbc` on the workstation, `dp` on the laptop. You
+  only ever see the bar of the machine on screen, so one click always means
+  "go to the other machine".
+- **Right click** opens the input menu. Pick an input to switch to it. The last
+  input this machine sent is highlighted and the quick-switch target is marked
+  with a bolt.
+- **Middle click** opens the widget's settings.
+
+The clicks are remappable from the bar's gesture settings.
+
+Open the menu from a keyboard or script:
+
+```sh
+noctalia msg panel-toggle robostyle/monitor-input-switch:menu
+```
+
+Add the `quick` tile from Settings → Control Center shortcuts for a
+one-press quick switch.
+
+### Hotkeys
+
+The service accepts IPC events. Bind them in your compositor:
+
+```sh
+noctalia msg plugin robostyle/monitor-input-switch:service all quick          # to the quick-switch target
+noctalia msg plugin robostyle/monitor-input-switch:service all switch usbc    # to a specific input id
+noctalia msg plugin robostyle/monitor-input-switch:service all detect         # rescan for the monitor
+```
+
+A hotkey is the way back when this machine's only monitor shows another
+input, since its bar is then off screen.
+
+Niri (`~/.config/niri/config.kdl`, inside `binds { }`):
+
+```kdl
+Mod+Shift+M { spawn "noctalia" "msg" "plugin" "robostyle/monitor-input-switch:service" "all" "quick"; }
+Mod+Shift+1 { spawn "noctalia" "msg" "plugin" "robostyle/monitor-input-switch:service" "all" "switch" "dp"; }
+Mod+Shift+2 { spawn "noctalia" "msg" "plugin" "robostyle/monitor-input-switch:service" "all" "switch" "usbc"; }
+```
+
+Hyprland (`~/.config/hypr/hyprland.conf`):
+
+```ini
+bind = SUPER SHIFT, M, exec, noctalia msg plugin robostyle/monitor-input-switch:service all quick
+bind = SUPER SHIFT, 1, exec, noctalia msg plugin robostyle/monitor-input-switch:service all switch dp
+bind = SUPER SHIFT, 2, exec, noctalia msg plugin robostyle/monitor-input-switch:service all switch usbc
+```
+
+Umbriel (`[keybinds]` in your Umbriel config):
+
+```toml
+"Mod+Shift+M" = "spawn:noctalia msg plugin robostyle/monitor-input-switch:service all quick"
+"Mod+Shift+1" = "spawn:noctalia msg plugin robostyle/monitor-input-switch:service all switch dp"
+"Mod+Shift+2" = "spawn:noctalia msg plugin robostyle/monitor-input-switch:service all switch usbc"
+```
+
+Sway (`~/.config/sway/config`):
+
+```text
+bindsym $mod+Shift+m exec noctalia msg plugin robostyle/monitor-input-switch:service all quick
+```
+
+## Settings
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `quick_target` | `string` | `usbc` | Input id for left click, the tile and the `quick` IPC event. |
+| `inputs` | `string_list` | `dp`, `usbc`, `hdmi1`, `hdmi2` | Input ids shown in the menu, in order. |
+| `labels` | `string_map` | *(empty)* | Display names per input id, e.g. `dp = Workstation`, `usbc = Laptop`. |
+| `codes` | `string_map` | `dp = 0xD0`, `usbc = 0xD1`, `hdmi1 = 0x90`, `hdmi2 = 0x91` | Value sent per input id, hex or decimal (advanced). |
+| `protocol` | `select` | `lg` | `lg`: host address 0x50, VCP 0xF4. `mccs`: standard Input Select, VCP 0x60 (advanced). |
+| `vendor` | `string` | `GSM` | EDID manufacturer id used to find the monitor; `GSM` is LG (advanced). |
+| `connector` | `string` | *(empty)* | Only use the monitor on this connector, e.g. `DP-1` (advanced). |
+| `bus` | `int` | `-1` | Fixed `/dev/i2c-N` number; `-1` detects automatically (advanced). |
+
+Widget settings:
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `label_mode` | `select` | `target` | Text next to the icon: `→ <quick-switch target>`, the last sent input, or nothing. |
+| `glyph` | `glyph` | `device-desktop` | Bar icon. |
+
+For a non-LG monitor, set **Protocol** to standard MCCS and enter the
+monitor's own codes. Common MCCS values are `0x0F` DisplayPort 1, `0x10`
+DisplayPort 2, `0x11` HDMI 1 and `0x12` HDMI 2; `ddcutil capabilities` lists
+the ones your monitor accepts.
+
+## How it works
+
+The service scans `/sys/class/drm/card*-*`. For each connected connector it
+reads the EDID manufacturer id (bytes 8–9) and finds the connector's i2c bus:
+the DP AUX channel (`i2c-N` child) or the HDMI `ddc` link. The first match for
+**EDID vendor id** (and **Connector**, if set) is used.
+
+It then writes one DDC/CI VCP-set packet to address `0x37`:
+
+```text
+i2ctransfer -y <bus> w7@0x37 <source> 0x84 0x03 <vcp> <hi> <lo> <checksum>
+```
+
+with source `0x50` and VCP `0xF4` for LG, or `0x51` and `0x60` for MCCS. The
+checksum is the XOR of `0x6E` and all preceding bytes.
+
+Once the monitor shows another input it often disappears from this machine.
+The last bus that worked is saved in the plugin's data directory, so switching
+back still works, also after the shell restarts.
+
+Most monitors, LG included, do not report the active input reliably, so the
+plugin never reads it back. "Last sent" is what this machine last sent.
+
+- **Processes spawned:** `sh` (the sysfs scan) and `i2ctransfer`, only when
+  switching or rescanning.
+- **Files written:** `monitor.json` in the plugin data directory.
+
+## Troubleshooting
+
+- **No permission to open the i2c device:** the udev rule is missing or not
+  applied. Check `getfacl /dev/i2c-N`.
+- **The i2c device does not exist:** `i2c-dev` is not loaded. Run
+  `sudo modprobe i2c-dev`.
+- **No monitor found:** run
+  `od -An -tx1 -j8 -N2 /sys/class/drm/card*-DP-1/edid`. LG prints `1e 6d`.
+  Otherwise set **EDID vendor id**, **Connector** or **i2c bus override**.
+- **The write succeeds but nothing happens:** check that DDC/CI is enabled in
+  the monitor's menu and try the other **Protocol**.
