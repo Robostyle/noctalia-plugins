@@ -434,6 +434,33 @@ function onIpc(event, payload)
   end
 end
 
+-- Plugging or unplugging the monitor (or switching its input away) changes the
+-- output set, so rescan right away to turn the widget red or back without a
+-- click. The kernel may update the connector status a moment after the
+-- compositor reacts, so scan once more a second later; only the newest change
+-- schedules that second scan. A running switch does its own scan.
+local outputsGen = 0
+
+local function rescan()
+  if busy then
+    return
+  end
+  detect(function(_mon)
+    publish()
+  end)
+end
+
+function onOutputsChanged()
+  outputsGen += 1
+  local gen = outputsGen
+  rescan()
+  noctalia.runAsync({ "sleep", "1" }, function(_res)
+    if gen == outputsGen then
+      rescan()
+    end
+  end)
+end
+
 function onConfigChanged()
   readConfig()
   publish()

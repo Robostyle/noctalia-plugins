@@ -19,6 +19,16 @@ function M.request(action: string, id: string?)
   noctalia.state.set(M.REQUEST_KEY, { nonce = nonce, action = action, id = id })
 end
 
+-- True when the service published a snapshot and its last scan did not find
+-- the monitor (unplugged, switched away, or never seen). A fixed bus override
+-- always counts as connected.
+function M.disconnected(snapshot): boolean
+  if type(snapshot) ~= "table" then
+    return false
+  end
+  return snapshot.monitor == nil or not snapshot.monitor.live
+end
+
 -- The input entry for id in a published snapshot, or nil.
 function M.find(snapshot, id: string?)
   if type(snapshot) ~= "table" or type(snapshot.inputs) ~= "table" or id == nil then

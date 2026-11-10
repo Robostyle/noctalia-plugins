@@ -105,5 +105,11 @@ end)
 
 function onOpen(_context)
   snapshot = noctalia.state.get(common.STATE_KEY)
+  -- Backstop for a leftover right-click binding in the bar config, or a
+  -- panel-toggle from a script: with no monitor there is nothing to pick.
+  if common.disconnected(snapshot) then
+    panel.close()
+    return
+  end
   render()
 end

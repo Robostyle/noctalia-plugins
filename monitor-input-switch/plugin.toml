@@ -11,7 +11,7 @@ id = "robostyle/monitor-input-switch"
 name = "Monitor Input Switcher"
 version = "0.1.0"
 # 24: argv runAsync. Also uses require (22), [widget.actions] (14),
-# openSettings (15) and service onExit (17). Runs on Noctalia v5.0.0-beta.9+.
+# openSettings (15), service onExit (17) and onOutputsChanged. Runs on Noctalia v5.0.0-beta.9+.
 plugin_api = 24
 author = "Robostyle"
 license = "MIT"
@@ -112,12 +112,9 @@ dismiss_on_outside_click = true
 id = "button"
 entry = "widget.luau"
 
-  # Declared as IPC lines rather than hard-coded in onClick/onRightClick, so
-  # the bar's own gesture settings can remap them. Middle click keeps the
-  # host default (open this widget's settings).
-  [widget.actions]
-  left = "plugin robostyle/monitor-input-switch:service all quick"
-  right = "panel-toggle robostyle/monitor-input-switch:menu"
+  # No [widget.actions]: left and right click are onClick and onRightClick in
+  # widget.luau. A binding would always run, also while the monitor is
+  # disconnected. Middle click keeps the host default (this widget's settings).
 
   [[widget.setting]]
   key = "label_mode"

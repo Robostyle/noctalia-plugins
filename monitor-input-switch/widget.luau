@@ -1,10 +1,8 @@
 --!nonstrict
 -- monitor-input-switch bar widget: renders the snapshot the service publishes.
 --
--- Clicks are declared in plugin.toml [widget.actions], so they can be remapped
--- from the bar's gesture settings:
---   left  -> plugin robostyle/monitor-input-switch:service all quick
---   right -> panel-toggle robostyle/monitor-input-switch:menu
+-- Clicks are handled in onClick and onRightClick below rather than bound in
+-- [widget.actions], so both do nothing while the monitor is disconnected.
 
 local common = require("./common.luau")
 
@@ -46,16 +44,20 @@ local function render()
 
   local target = common.find(snapshot, snapshot.quick)
   local current = common.find(snapshot, snapshot.current)
+  local offline = common.disconnected(snapshot)
 
+  -- No label while disconnected: there is nothing to switch.
   local text = ""
-  if mode == "target" and target ~= nil then
+  if offline then
+    text = ""
+  elseif mode == "target" and target ~= nil then
     text = `→ {target.label}`
   elseif mode == "current" and current ~= nil then
     text = current.label
   end
 
   local role = "on_surface"
-  if snapshot.error ~= nil then
+  if snapshot.error ~= nil or offline then
     glyph = "plug-x"
     role = "error"
   elseif snapshot.busy then
@@ -71,12 +73,14 @@ local function render()
   local rows = {
     { key = tr("tooltip.monitor"), value = monitorText(snapshot.monitor) },
     { key = tr("tooltip.last_sent"), value = if current ~= nil then current.label else tr("status.unknown") },
-    {
+  }
+  if not offline then
+    table.insert(rows, {
       key = tr("tooltip.left_click"),
       value = if target ~= nil then tr("tooltip.switch_to", { name = target.label }) else tr("errors.no_quick_target"),
-    },
-    { key = tr("tooltip.right_click"), value = tr("tooltip.all_inputs") },
-  }
+    })
+    table.insert(rows, { key = tr("tooltip.right_click"), value = tr("tooltip.all_inputs") })
+  end
   if snapshot.error ~= nil then
     table.insert(rows, 1, { key = tr("tooltip.error"), value = snapshot.error })
   end
@@ -89,6 +93,23 @@ noctalia.state.watch(common.STATE_KEY, function(value)
     render()
   end
 end)
+
+-- Left click switches to the quick-switch target and right click opens the
+-- input menu, but neither does anything while the monitor is gone: there is
+-- nothing to switch. Not bound in [widget.actions], because a binding there
+-- would always run and skip this check. Hotkeys go to the service directly
+-- and still work, which is the way back after switching away.
+function onClick()
+  if not common.disconnected(snapshot) then
+    common.request("quick")
+  end
+end
+
+function onRightClick()
+  if not common.disconnected(snapshot) then
+    noctalia.togglePanel("robostyle/monitor-input-switch:menu")
+  end
+end
 
 -- Settings are re-read on every render; no polling needed otherwise.
 function update()

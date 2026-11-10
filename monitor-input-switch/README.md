@@ -83,7 +83,15 @@ Add the `button` widget from the bar's Add-widget picker.
   with a bolt.
 - **Middle click** opens the widget's settings.
 
-The clicks are remappable from the bar's gesture settings.
+When the monitor is not connected (cable out, or it shows another input), the
+icon turns red and the label goes away. Left and right click then do nothing,
+and the tooltip shows the last known monitor. The service rescans whenever the
+set of outputs changes, so this shows right away, without a click. Hotkeys
+still work while disconnected; they are the way back after switching away.
+
+The clicks are handled by the widget itself, not bound as bar gestures, so
+they can be ignored while disconnected. Do not bind left or right click for
+this widget in the bar's gesture settings: a binding always runs.
 
 Open the menu from a keyboard or script:
 
